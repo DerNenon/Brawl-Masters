@@ -1,0 +1,74 @@
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: { default: 'arcade' },
+    scene: { preload, create, update }
+};
+
+let player, cursors, bullets, enemies, lastFired = 0, touchStartX, touchStartY, touchMoveX, touchMoveY;
+
+const game = new Phaser.Game(config);
+
+function preload() {
+    this.load.image('player', 'https://i.imgur.com/5RRKJTR.png'); // Platzhalter-Sprite
+    this.load.image('bullet', 'https://i.imgur.com/TqXmQ8u.png'); // Platzhalter-Bullet
+    this.load.image('enemy', 'https://i.imgur.com/2qz3ShJ.png'); // Platzhalter-Gegner
+}
+
+function create() {
+    player = this.physics.add.sprite(400, 300, 'player').setScale(0.5);
+    player.setCollideWorldBounds(true);
+
+    cursors = this.input.keyboard.createCursorKeys();
+    bullets = this.physics.add.group();
+    enemies = this.physics.add.group();
+
+    // Einfache Gegner erstellen
+    for (let i = 0; i < 3; i++) {
+        let enemy = this.physics.add.sprite(Phaser.Math.Between(100, 700), Phaser.Math.Between(100, 500), 'enemy');
+        enemies.add(enemy);
+    }
+
+    // Schießen mit Mausklick
+    this.input.on('pointerdown', (pointer) => {
+        let time = this.time.now;
+        if (time > lastFired) {
+            let bullet = bullets.create(player.x, player.y, 'bullet');
+            this.physics.moveTo(bullet, pointer.x, pointer.y, 500);
+            lastFired = time + 200;
+        }
+    });
+
+    // Touch-Steuerung für Bewegung
+    this.input.on('pointerdown', (pointer) => {
+        touchStartX = pointer.x;
+        touchStartY = pointer.y;
+    });
+
+    this.input.on('pointermove', (pointer) => {
+        touchMoveX = pointer.x;
+        touchMoveY = pointer.y;
+
+        let angle = Phaser.Math.Angle.Between(touchStartX, touchStartY, touchMoveX, touchMoveY);
+        let distance = Phaser.Math.Distance.Between(touchStartX, touchStartY, touchMoveX, touchMoveY);
+        
+        player.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+    });
+
+    // Kollisionen zwischen Kugeln und Gegnern
+    this.physics.add.collider(bullets, enemies, (bullet, enemy) => {
+        bullet.destroy();
+        enemy.destroy();
+    });
+}
+
+function update() {
+    let speed = 200;
+    player.setVelocity(0);
+
+    if (cursors.left.isDown) player.setVelocityX(-speed);
+    if (cursors.right.isDown) player.setVelocityX(speed);
+    if (cursors.up.isDown) player.setVelocityY(-speed);
+    if (cursors.down.isDown) player.setVelocityY(speed);
+}
